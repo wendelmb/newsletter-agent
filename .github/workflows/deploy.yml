@@ -1,0 +1,43 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Inject secrets and set VPS workflow ID
+        run: |
+          sed \
+            -e "s|YOUR_ANTHROPIC_API_KEY|${{ secrets.ANTHROPIC_API_KEY }}|g" \
+            -e "s|YOUR_NOTION_TOKEN|${{ secrets.NOTION_TOKEN }}|g" \
+            -e "s|YOUR_NOTION_PARENT_PAGE_ID|3614f073-2f28-80b1-974a-eddb345456fa|g" \
+            n8n-workflow/newsletter-agent.json \
+          | jq '.id = "newsletter-agent-vps"' > wf_deploy.json
+
+      - name: Copy workflow to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: 145.79.7.215
+          username: root
+          key: ${{ secrets.VPS_SSH_KEY }}
+          source: wf_deploy.json
+          target: /tmp/
+
+      - name: Import, publish and restart n8n
+        uses: appleboy/ssh-action@v1
+        with:
+          host: 145.79.7.215
+          username: root
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            docker cp /tmp/wf_deploy.json n8n:/tmp/wf_deploy.json
+            docker exec n8n n8n import:workflow --input=/tmp/wf_deploy.json
+            docker exec n8n n8n publish:workflow --id=newsletter-agent-vps
+            rm /tmp/wf_deploy.json
+            cd /opt/lounge-cafe && docker compose restart n8n
+            echo "Deploy concluido em $(date)"
