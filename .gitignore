@@ -1,0 +1,14 @@
+# Credenciais e ambiente
+.env
+.env.*
+!.env.example
+
+# Workflows com credenciais reais (nunca commitar)
+*-with-credentials.json
+*-vps.json
+*-prod.json
+
+# Temporários
+*.tmp
+*.log
+/tmp/
