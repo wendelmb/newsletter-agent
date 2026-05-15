@@ -1,6 +1,98 @@
 {
-  "_comment": "Workflow ainda nao criado. Exportar do n8n apos construcao e substituir este arquivo.",
   "name": "Newsletter Agent",
-  "nodes": [],
-  "connections": {}
+  "nodes": [
+    {
+      "id": "cron-trigger",
+      "name": "Cron 7h",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300],
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "cronExpression", "expression": "0 7 * * *" }]
+        }
+      }
+    },
+    {
+      "id": "fetch-rss",
+      "name": "Fetch RSS",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 300],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const https = require('https');\nconst http = require('http');\n\nconst feeds = [\n  { url: 'https://www.infomoney.com.br/feed/', category: 'mercado_economia' },\n  { url: 'https://valor.globo.com/rss/home.xml', category: 'mercado_economia' },\n  { url: 'https://www.cnnbrasil.com.br/economia/feed/', category: 'mercado_economia' },\n  { url: 'https://feeds.folha.uol.com.br/mercado/rss091.xml', category: 'mercado_economia' },\n  { url: 'https://g1.globo.com/rss/g1/politica/feed.xml', category: 'politica_brasil' },\n  { url: 'https://agenciabrasil.ebc.com.br/rss/ultimasnoticias/feed.xml', category: 'politica_brasil' },\n  { url: 'https://feeds.folha.uol.com.br/brasil/rss091.xml', category: 'politica_brasil' },\n  { url: 'https://rss.uol.com.br/feed/noticias.xml', category: 'politica_brasil' },\n  { url: 'https://www.technologyreview.com/feed/', category: 'ia_tecnologia' },\n  { url: 'https://techcrunch.com/feed/', category: 'ia_tecnologia' },\n  { url: 'https://www.theverge.com/rss/index.xml', category: 'ia_tecnologia' },\n  { url: 'https://feeds.arstechnica.com/arstechnica/index', category: 'ia_tecnologia' },\n  { url: 'https://olhardigital.com.br/feed/', category: 'ia_tecnologia' },\n  { url: 'https://www.lennysnewsletter.com/feed', category: 'produto_growth' },\n  { url: 'https://www.dwarkeshpatel.com/feed', category: 'produto_growth' },\n];\n\nfunction fetchUrl(url, redirects = 0) {\n  return new Promise((resolve, reject) => {\n    if (redirects > 3) return reject(new Error('too many redirects'));\n    const lib = url.startsWith('https') ? https : http;\n    const req = lib.get(url, { timeout: 15000, headers: { 'User-Agent': 'Mozilla/5.0 newsletter-agent/1.0' } }, (res) => {\n      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {\n        return fetchUrl(res.headers.location, redirects + 1).then(resolve).catch(reject);\n      }\n      let data = '';\n      res.on('data', chunk => data += chunk);\n      res.on('end', () => resolve(data));\n    });\n    req.on('error', reject);\n    req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });\n  });\n}\n\nfunction cleanText(str) {\n  return str.replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '\"').replace(/&#39;/g, \"'\").replace(/\\s+/g, ' ').trim();\n}\n\nfunction parseField(block, tag) {\n  const m = block.match(new RegExp('<' + tag + '[^>]*>(?:<!\\\\[CDATA\\\\[)?([\\\\s\\\\S]*?)(?:\\\\]\\\\]>)?<\\\\/' + tag + '>', 'i'));\n  return m ? cleanText(m[1]) : '';\n}\n\nfunction parseFeed(xml, category) {\n  const articles = [];\n  const rssRe = /<item[^>]*>([\\s\\S]*?)<\\/item>/gi;\n  const atomRe = /<entry[^>]*>([\\s\\S]*?)<\\/entry>/gi;\n  let match;\n  while ((match = rssRe.exec(xml)) !== null) {\n    const b = match[1];\n    const title = parseField(b, 'title');\n    if (!title) continue;\n    const description = parseField(b, 'description').substring(0, 280);\n    const link = parseField(b, 'link') || (b.match(/<link>([\\s\\S]*?)<\\/link>/) || [])[1]?.trim() || '';\n    const pubDate = parseField(b, 'pubDate');\n    articles.push({ title, description, link, pubDate, category });\n  }\n  if (articles.length === 0) {\n    while ((match = atomRe.exec(xml)) !== null) {\n      const b = match[1];\n      const title = parseField(b, 'title');\n      if (!title) continue;\n      const description = (parseField(b, 'summary') || parseField(b, 'content')).substring(0, 280);\n      const linkMatch = b.match(/<link[^>]+href=[\"']([^\"']+)[\"']/i);\n      const link = linkMatch ? linkMatch[1] : '';\n      const pubDate = parseField(b, 'published') || parseField(b, 'updated');\n      articles.push({ title, description, link, pubDate, category });\n    }\n  }\n  return articles;\n}\n\nconst results = await Promise.allSettled(\n  feeds.map(async ({ url, category }) => {\n    try {\n      const xml = await fetchUrl(url);\n      return parseFeed(xml, category);\n    } catch (e) {\n      return [];\n    }\n  })\n);\n\nconst allArticles = results.flatMap(r => r.status === 'fulfilled' ? r.value : []);\nreturn allArticles.map(article => ({ json: article }));"
+      }
+    },
+    {
+      "id": "filtro-24h",
+      "name": "Filtro 24h",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [760, 300],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const now = new Date();\nconst cutoff = new Date(now.getTime() - 24 * 60 * 60 * 1000);\nconst items = $input.all();\nconst filtered = items.filter(item => {\n  const pd = item.json.pubDate;\n  if (!pd) return true;\n  const d = new Date(pd);\n  return !isNaN(d.getTime()) && d >= cutoff;\n});\nif (filtered.length === 0) return items.slice(0, 20);\nreturn filtered;"
+      }
+    },
+    {
+      "id": "preparar-prompt",
+      "name": "Preparar Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1020, 300],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const items = $input.all();\nconst MAX_PER_CAT = 8;\nconst cats = { mercado_economia: [], politica_brasil: [], ia_tecnologia: [], produto_growth: [] };\nfor (const item of items) {\n  const cat = item.json.category;\n  if (cats[cat] && cats[cat].length < MAX_PER_CAT) {\n    cats[cat].push(`- ${item.json.title}: ${item.json.description || ''}`);\n  }\n}\nconst today = new Date().toLocaleDateString('pt-BR', {\n  weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',\n  timeZone: 'America/Sao_Paulo'\n});\nconst prompt = `Voce e um assistente que cria newsletters diarias personalizadas para Wendel Bitencourt.\\nHoje e ${today}.\\n\\nCom base nos artigos abaixo, gere a newsletter completa com exatamente 7 secoes.\\n\\n=== MERCADO & ECONOMIA ===\\n${cats.mercado_economia.length ? cats.mercado_economia.join('\\n') : '(sem artigos novos)'}\\n\\n=== POLITICA & BRASIL ===\\n${cats.politica_brasil.length ? cats.politica_brasil.join('\\n') : '(sem artigos novos)'}\\n\\n=== IA & TECNOLOGIA ===\\n${cats.ia_tecnologia.length ? cats.ia_tecnologia.join('\\n') : '(sem artigos novos)'}\\n\\n=== PRODUTO & GROWTH ===\\n${cats.produto_growth.length ? cats.produto_growth.join('\\n') : '(sem novo conteudo)'}\\n\\nFORMATO EXATO DA NEWSLETTER:\\n\\nBom dia, Wendel! Aqui estao os principais acontecimentos de hoje:\\n\\n**MERCADO & ECONOMIA**\\n(3-4 noticias mais relevantes: - [manchete]: descricao em 1-2 linhas)\\n\\n**POLITICA & BRASIL**\\n(3-4 noticias mais relevantes no mesmo formato)\\n\\n**IA & TECNOLOGIA**\\n(3-4 noticias mais relevantes no mesmo formato)\\n\\n**PRODUTO & GROWTH**\\n(1-2 insights do Lenny ou Dwarkesh se houver; caso contrario: sem novo conteudo essa semana)\\n\\n**PILULA DO CONHECIMENTO**\\n(UM insight do livro The Scaling Era, ensaios de Dario Amodei ou episodios do Dwarkesh Podcast. 3-4 linhas. Varie o tema a cada dia.)\\n\\n**DEVOCIONAL DO DIA**\\n(Versiculo biblico no formato Livro Cap:Verso + texto. 2-3 linhas de reflexao crista pratica.)\\n\\n**FRASE DO DIA**\\n\"[frase inspiradora]\" - Autor\\n\\n---\\n_Newsletter gerada as 7h por IA_`;\nreturn [{ json: { prompt } }];"
+      }
+    },
+    {
+      "id": "claude-synthesis",
+      "name": "Claude Synthesis",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1280, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "YOUR_ANTHROPIC_API_KEY" },
+            { "name": "anthropic-version", "value": "2023-06-01" }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({model: 'claude-sonnet-4-6', max_tokens: 4000, messages: [{role: 'user', content: $json.prompt}]}) }}",
+        "options": { "timeout": 120000 }
+      }
+    },
+    {
+      "id": "preparar-notion",
+      "name": "Salvar no Notion",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1540, 300],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const https = require('https');\n\nconst notionToken = 'YOUR_NOTION_TOKEN';\nconst parentPageId = 'YOUR_NOTION_PARENT_PAGE_ID';\n\nconst claudeText = $json.content[0].text;\nconst today = new Date();\nconst dd = String(today.getDate()).padStart(2, '0');\nconst mm = String(today.getMonth() + 1).padStart(2, '0');\nconst title = `Atualize Hoje - ${dd}/${mm}`;\n\nconst lines = claudeText.split('\\n');\nconst blocks = [];\nfor (const line of lines) {\n  const t = line.trim();\n  if (!t) continue;\n  if (t === '---') { blocks.push({ object: 'block', type: 'divider', divider: {} }); continue; }\n  if (/^\\*\\*[^*]+\\*\\*$/.test(t)) {\n    blocks.push({ object: 'block', type: 'heading_2', heading_2: { rich_text: [{ type: 'text', text: { content: t.replace(/\\*\\*/g, '') } }] } });\n    continue;\n  }\n  if (t.startsWith('- ')) {\n    blocks.push({ object: 'block', type: 'bulleted_list_item', bulleted_list_item: { rich_text: [{ type: 'text', text: { content: t.substring(2).substring(0, 2000) } }] } });\n    continue;\n  }\n  const isItalic = t.startsWith('_') && t.endsWith('_');\n  const cleanText = isItalic ? t.slice(1, -1) : t;\n  let remaining = cleanText;\n  while (remaining.length > 0) {\n    const chunk = remaining.substring(0, 2000);\n    remaining = remaining.substring(2000);\n    const richText = [{ type: 'text', text: { content: chunk } }];\n    if (isItalic) richText[0].annotations = { italic: true };\n    blocks.push({ object: 'block', type: 'paragraph', paragraph: { rich_text: richText } });\n  }\n}\n\nfunction notionReq(method, path, body) {\n  return new Promise((resolve, reject) => {\n    const bodyStr = JSON.stringify(body);\n    const opts = {\n      hostname: 'api.notion.com', port: 443, path, method,\n      headers: { 'Authorization': `Bearer ${notionToken}`, 'Content-Type': 'application/json', 'Notion-Version': '2022-06-28', 'Content-Length': Buffer.byteLength(bodyStr) }\n    };\n    const req = https.request(opts, (res) => {\n      let raw = '';\n      res.on('data', c => raw += c);\n      res.on('end', () => {\n        try {\n          const parsed = JSON.parse(raw);\n          if (res.statusCode < 200 || res.statusCode >= 300) reject(new Error(`Notion ${res.statusCode}: ${JSON.stringify(parsed)}`));\n          else resolve(parsed);\n        } catch(e) { reject(e); }\n      });\n    });\n    req.on('error', reject);\n    req.write(bodyStr);\n    req.end();\n  });\n}\n\nconst page = await notionReq('POST', '/v1/pages', {\n  parent: { page_id: parentPageId },\n  icon: { type: 'emoji', emoji: '📰' },\n  properties: { title: [{ text: { content: title } }] },\n  children: blocks.slice(0, 100)\n});\n\nfor (let i = 100; i < blocks.length; i += 100) {\n  await notionReq('PATCH', `/v1/blocks/${page.id}/children`, { children: blocks.slice(i, i + 100) });\n}\n\nreturn [{ json: { notion_url: page.url, notion_page_id: page.id, title, status: 'saved' } }];"
+      }
+    }
+  ],
+  "connections": {
+    "Cron 7h": { "main": [[{ "node": "Fetch RSS", "type": "main", "index": 0 }]] },
+    "Fetch RSS": { "main": [[{ "node": "Filtro 24h", "type": "main", "index": 0 }]] },
+    "Filtro 24h": { "main": [[{ "node": "Preparar Prompt", "type": "main", "index": 0 }]] },
+    "Preparar Prompt": { "main": [[{ "node": "Claude Synthesis", "type": "main", "index": 0 }]] },
+    "Claude Synthesis": { "main": [[{ "node": "Salvar no Notion", "type": "main", "index": 0 }]] }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Sao_Paulo",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true
+  }
 }
