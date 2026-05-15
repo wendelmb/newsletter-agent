@@ -6,10 +6,18 @@
       "name": "Cron 7h",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
-      "position": [240, 300],
+      "position": [
+        240,
+        300
+      ],
       "parameters": {
         "rule": {
-          "interval": [{ "field": "cronExpression", "expression": "0 7 * * *" }]
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 7 * * *"
+            }
+          ]
         }
       }
     },
@@ -18,10 +26,13 @@
       "name": "Fetch RSS",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [500, 300],
+      "position": [
+        500,
+        300
+      ],
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const https = require('https');\nconst http = require('http');\n\nconst feeds = [\n  { url: 'https://www.infomoney.com.br/feed/', category: 'mercado_economia' },\n  { url: 'https://valor.globo.com/rss/home.xml', category: 'mercado_economia' },\n  { url: 'https://www.cnnbrasil.com.br/economia/feed/', category: 'mercado_economia' },\n  { url: 'https://feeds.folha.uol.com.br/mercado/rss091.xml', category: 'mercado_economia' },\n  { url: 'https://g1.globo.com/rss/g1/politica/feed.xml', category: 'politica_brasil' },\n  { url: 'https://agenciabrasil.ebc.com.br/rss/ultimasnoticias/feed.xml', category: 'politica_brasil' },\n  { url: 'https://feeds.folha.uol.com.br/brasil/rss091.xml', category: 'politica_brasil' },\n  { url: 'https://rss.uol.com.br/feed/noticias.xml', category: 'politica_brasil' },\n  { url: 'https://www.technologyreview.com/feed/', category: 'ia_tecnologia' },\n  { url: 'https://techcrunch.com/feed/', category: 'ia_tecnologia' },\n  { url: 'https://www.theverge.com/rss/index.xml', category: 'ia_tecnologia' },\n  { url: 'https://feeds.arstechnica.com/arstechnica/index', category: 'ia_tecnologia' },\n  { url: 'https://olhardigital.com.br/feed/', category: 'ia_tecnologia' },\n  { url: 'https://www.lennysnewsletter.com/feed', category: 'produto_growth' },\n  { url: 'https://www.dwarkeshpatel.com/feed', category: 'produto_growth' },\n];\n\nfunction fetchUrl(url, redirects = 0) {\n  return new Promise((resolve, reject) => {\n    if (redirects > 3) return reject(new Error('too many redirects'));\n    const lib = url.startsWith('https') ? https : http;\n    const req = lib.get(url, { timeout: 15000, headers: { 'User-Agent': 'Mozilla/5.0 newsletter-agent/1.0' } }, (res) => {\n      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {\n        return fetchUrl(res.headers.location, redirects + 1).then(resolve).catch(reject);\n      }\n      let data = '';\n      res.on('data', chunk => data += chunk);\n      res.on('end', () => resolve(data));\n    });\n    req.on('error', reject);\n    req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });\n  });\n}\n\nfunction cleanText(str) {\n  return str.replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '\"').replace(/&#39;/g, \"'\").replace(/\\s+/g, ' ').trim();\n}\n\nfunction parseField(block, tag) {\n  const m = block.match(new RegExp('<' + tag + '[^>]*>(?:<!\\\\[CDATA\\\\[)?([\\\\s\\\\S]*?)(?:\\\\]\\\\]>)?<\\\\/' + tag + '>', 'i'));\n  return m ? cleanText(m[1]) : '';\n}\n\nfunction parseFeed(xml, category) {\n  const articles = [];\n  const rssRe = /<item[^>]*>([\\s\\S]*?)<\\/item>/gi;\n  const atomRe = /<entry[^>]*>([\\s\\S]*?)<\\/entry>/gi;\n  let match;\n  while ((match = rssRe.exec(xml)) !== null) {\n    const b = match[1];\n    const title = parseField(b, 'title');\n    if (!title) continue;\n    const description = parseField(b, 'description').substring(0, 280);\n    const link = parseField(b, 'link') || (b.match(/<link>([\\s\\S]*?)<\\/link>/) || [])[1]?.trim() || '';\n    const pubDate = parseField(b, 'pubDate');\n    articles.push({ title, description, link, pubDate, category });\n  }\n  if (articles.length === 0) {\n    while ((match = atomRe.exec(xml)) !== null) {\n      const b = match[1];\n      const title = parseField(b, 'title');\n      if (!title) continue;\n      const description = (parseField(b, 'summary') || parseField(b, 'content')).substring(0, 280);\n      const linkMatch = b.match(/<link[^>]+href=[\"']([^\"']+)[\"']/i);\n      const link = linkMatch ? linkMatch[1] : '';\n      const pubDate = parseField(b, 'published') || parseField(b, 'updated');\n      articles.push({ title, description, link, pubDate, category });\n    }\n  }\n  return articles;\n}\n\nconst results = await Promise.allSettled(\n  feeds.map(async ({ url, category }) => {\n    try {\n      const xml = await fetchUrl(url);\n      return parseFeed(xml, category);\n    } catch (e) {\n      return [];\n    }\n  })\n);\n\nconst allArticles = results.flatMap(r => r.status === 'fulfilled' ? r.value : []);\nreturn allArticles.map(article => ({ json: article }));"
+        "jsCode": "const https = require('https');\nconst http = require('http');\n\nconst feeds = [\n  { url: 'https://www.infomoney.com.br/feed/', category: 'mercado_economia' },\n  { url: 'https://valor.globo.com/rss/home.xml', category: 'mercado_economia' },\n  { url: 'https://www.cnnbrasil.com.br/economia/feed/', category: 'mercado_economia' },\n  { url: 'https://feeds.folha.uol.com.br/mercado/rss091.xml', category: 'mercado_economia' },\n  { url: 'https://g1.globo.com/rss/g1/politica/feed.xml', category: 'politica_brasil' },\n  { url: 'https://agenciabrasil.ebc.com.br/rss/ultimasnoticias/feed.xml', category: 'politica_brasil' },\n  { url: 'https://feeds.folha.uol.com.br/brasil/rss091.xml', category: 'politica_brasil' },\n  { url: 'https://rss.uol.com.br/feed/noticias.xml', category: 'politica_brasil' },\n  { url: 'https://www.technologyreview.com/feed/', category: 'ia_tecnologia' },\n  { url: 'https://techcrunch.com/feed/', category: 'ia_tecnologia' },\n  { url: 'https://www.theverge.com/rss/index.xml', category: 'ia_tecnologia' },\n  { url: 'https://feeds.arstechnica.com/arstechnica/index', category: 'ia_tecnologia' },\n  { url: 'https://olhardigital.com.br/feed/', category: 'ia_tecnologia' },\n  { url: 'https://www.lennysnewsletter.com/feed', category: 'produto_growth' },\n  { url: 'https://www.dwarkeshpatel.com/feed', category: 'produto_growth' },\n];\n\nfunction fetchUrl(url, redirects = 0) {\n  return new Promise((resolve, reject) => {\n    if (redirects > 3) return reject(new Error('too many redirects'));\n    const lib = url.startsWith('https') ? https : http;\n    const req = lib.get(url, { timeout: 15000, headers: { 'User-Agent': 'Mozilla/5.0 newsletter-agent/1.0' } }, (res) => {\n      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {\n        return fetchUrl(res.headers.location, redirects + 1).then(resolve).catch(reject);\n      }\n      let data = '';\n      res.on('data', chunk => data += chunk);\n      res.on('end', () => resolve(data));\n    });\n    req.on('error', reject);\n    req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });\n  });\n}\n\nfunction cleanText(str) {\n  return str.replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '\"').replace(/&#39;/g, \"'\").replace(/\\s+/g, ' ').trim();\n}\n\nfunction parseField(block, tag) {\n  const m = block.match(new RegExp('<' + tag + '[^>]*>(?:<!\\\\[CDATA\\\\[)?([\\\\s\\\\S]*?)(?:\\\\]\\\\]>)?<\\\\/' + tag + '>', 'i'));\n  return m ? cleanText(m[1]) : '';\n}\n\nfunction parseFeed(xml, category) {\n  const articles = [];\n  const rssRe = /<item[^>]*>([\\s\\S]*?)<\\/item>/gi;\n  const atomRe = /<entry[^>]*>([\\s\\S]*?)<\\/entry>/gi;\n  let match;\n  \n  while ((match = rssRe.exec(xml)) !== null) {\n    const b = match[1];\n    const title = parseField(b, 'title');\n    if (!title) continue;\n    const description = parseField(b, 'description').substring(0, 280);\n    const link = parseField(b, 'link') || (b.match(/<link>([\\s\\S]*?)<\\/link>/) || [])[1]?.trim() || '';\n    const pubDate = parseField(b, 'pubDate');\n    articles.push({ title, description, link, pubDate, category });\n  }\n  \n  if (articles.length === 0) {\n    while ((match = atomRe.exec(xml)) !== null) {\n      const b = match[1];\n      const title = parseField(b, 'title');\n      if (!title) continue;\n      const description = (parseField(b, 'summary') || parseField(b, 'content')).substring(0, 280);\n      const linkMatch = b.match(/<link[^>]+href=[\"']([^\"']+)[\"']/i);\n      const link = linkMatch ? linkMatch[1] : '';\n      const pubDate = parseField(b, 'published') || parseField(b, 'updated');\n      articles.push({ title, description, link, pubDate, category });\n    }\n  }\n  \n  return articles;\n}\n\nconst results = await Promise.allSettled(\n  feeds.map(async ({ url, category }) => {\n    try {\n      const xml = await fetchUrl(url);\n      return parseFeed(xml, category);\n    } catch (e) {\n      return [];\n    }\n  })\n);\n\nconst allArticles = results.flatMap(r => r.status === 'fulfilled' ? r.value : []);\nreturn allArticles.map(article => ({ json: article }));"
       }
     },
     {
@@ -29,10 +40,13 @@
       "name": "Filtro 24h",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [760, 300],
+      "position": [
+        760,
+        300
+      ],
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const now = new Date();\nconst cutoff = new Date(now.getTime() - 24 * 60 * 60 * 1000);\nconst items = $input.all();\nconst filtered = items.filter(item => {\n  const pd = item.json.pubDate;\n  if (!pd) return true;\n  const d = new Date(pd);\n  return !isNaN(d.getTime()) && d >= cutoff;\n});\nif (filtered.length === 0) return items.slice(0, 20);\nreturn filtered;"
+        "jsCode": "const now = new Date();\nconst cutoff = new Date(now.getTime() - 24 * 60 * 60 * 1000);\nconst items = $input.all();\n\nconst filtered = items.filter(item => {\n  const pd = item.json.pubDate;\n  if (!pd) return true;\n  const d = new Date(pd);\n  return !isNaN(d.getTime()) && d >= cutoff;\n});\n\n// Fallback: se filtro zerou tudo, retorna os 20 mais recentes\nif (filtered.length === 0) return items.slice(0, 20);\nreturn filtered;"
       }
     },
     {
@@ -40,10 +54,13 @@
       "name": "Preparar Prompt",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1020, 300],
+      "position": [
+        1020,
+        300
+      ],
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const items = $input.all();\nconst MAX_PER_CAT = 8;\nconst cats = { mercado_economia: [], politica_brasil: [], ia_tecnologia: [], produto_growth: [] };\nfor (const item of items) {\n  const cat = item.json.category;\n  if (cats[cat] && cats[cat].length < MAX_PER_CAT) {\n    cats[cat].push(`- ${item.json.title}: ${item.json.description || ''}`);\n  }\n}\nconst today = new Date().toLocaleDateString('pt-BR', {\n  weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',\n  timeZone: 'America/Sao_Paulo'\n});\nconst prompt = `Voce e um assistente que cria newsletters diarias personalizadas para Wendel Bitencourt.\\nHoje e ${today}.\\n\\nCom base nos artigos abaixo, gere a newsletter completa com exatamente 7 secoes.\\n\\n=== MERCADO & ECONOMIA ===\\n${cats.mercado_economia.length ? cats.mercado_economia.join('\\n') : '(sem artigos novos)'}\\n\\n=== POLITICA & BRASIL ===\\n${cats.politica_brasil.length ? cats.politica_brasil.join('\\n') : '(sem artigos novos)'}\\n\\n=== IA & TECNOLOGIA ===\\n${cats.ia_tecnologia.length ? cats.ia_tecnologia.join('\\n') : '(sem artigos novos)'}\\n\\n=== PRODUTO & GROWTH ===\\n${cats.produto_growth.length ? cats.produto_growth.join('\\n') : '(sem novo conteudo)'}\\n\\nFORMATO EXATO DA NEWSLETTER:\\n\\nBom dia, Wendel! Aqui estao os principais acontecimentos de hoje:\\n\\n**MERCADO & ECONOMIA**\\n(3-4 noticias mais relevantes: - [manchete]: descricao em 1-2 linhas)\\n\\n**POLITICA & BRASIL**\\n(3-4 noticias mais relevantes no mesmo formato)\\n\\n**IA & TECNOLOGIA**\\n(3-4 noticias mais relevantes no mesmo formato)\\n\\n**PRODUTO & GROWTH**\\n(1-2 insights do Lenny ou Dwarkesh se houver; caso contrario: sem novo conteudo essa semana)\\n\\n**PILULA DO CONHECIMENTO**\\n(UM insight do livro The Scaling Era, ensaios de Dario Amodei ou episodios do Dwarkesh Podcast. 3-4 linhas. Varie o tema a cada dia.)\\n\\n**DEVOCIONAL DO DIA**\\n(Versiculo biblico no formato Livro Cap:Verso + texto. 2-3 linhas de reflexao crista pratica.)\\n\\n**FRASE DO DIA**\\n\"[frase inspiradora]\" - Autor\\n\\n---\\n_Newsletter gerada as 7h por IA_`;\nreturn [{ json: { prompt } }];"
+        "jsCode": "const items = $input.all();\nconst MAX_PER_CAT = 10;\nconst cats = { mercado_economia: [], politica_brasil: [], ia_tecnologia: [], produto_growth: [] };\nfor (const item of items) {\n  const cat = item.json.category;\n  if (cats[cat] && cats[cat].length < MAX_PER_CAT) {\n    cats[cat].push(`- ${item.json.title}: ${item.json.description || ''}`);\n  }\n}\nconst today = new Date().toLocaleDateString('pt-BR', {\n  weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',\n  timeZone: 'America/Sao_Paulo'\n});\nconst prompt = `Você é um jornalista e curador de conteúdo criando a newsletter diária personalizada para Wendel Bitencourt, empreendedor brasileiro interessado em mercados, política, inteligência artificial e crescimento de negócios.\n\nHoje é ${today}.\n\nCom base nos artigos abaixo, gere a newsletter completa com exatamente 7 seções no formato especificado.\n\n=== MERCADO & ECONOMIA ===\n${cats.mercado_economia.length ? cats.mercado_economia.join('\\n') : '(sem artigos novos hoje)'}\n\n=== POLÍTICA & BRASIL ===\n${cats.politica_brasil.length ? cats.politica_brasil.join('\\n') : '(sem artigos novos hoje)'}\n\n=== IA & TECNOLOGIA ===\n${cats.ia_tecnologia.length ? cats.ia_tecnologia.join('\\n') : '(sem artigos novos hoje)'}\n\n=== PRODUTO & GROWTH ===\n${cats.produto_growth.length ? cats.produto_growth.join('\\n') : '(sem novo conteúdo)'}\n\n---\n\nFORMATO EXATO — siga rigorosamente, sem acrescentar texto fora do padrão:\n\nBom dia, Wendel! 🌅\nHoje é ${today}. Aqui estão os principais acontecimentos.\n\n---\n\n## 📊 MERCADO & ECONOMIA\n\n**[Título direto e informativo da 1ª notícia]**\n[2-3 linhas de contexto: explique o fato, inclua números quando disponíveis, mencione impacto macro. Escreva para alguém que acompanha mercado e quer o essencial rápido.]\n💡 Por que importa: [1 linha sobre impacto prático para o leitor]\n\n**[Título da 2ª notícia]**\n[2-3 linhas de contexto]\n💡 Por que importa: [1 linha]\n\n**[Título da 3ª notícia]**\n[2-3 linhas de contexto]\n💡 Por que importa: [1 linha]\n\n(inclua 3-4 notícias bem detalhadas. Prefira qualidade e profundidade a quantidade.)\n\n---\n\n## 🗳️ POLÍTICA & BRASIL\n\n(mesmo formato: 3-4 notícias com título em negrito, 2-3 linhas de contexto, linha 💡 Por que importa:)\n\n---\n\n## 🤖 IA & TECNOLOGIA\n\n(mesmo formato. Priorize: novos modelos de IA, impactos no trabalho, regulação, financiamentos, disputas entre big techs. Se o RSS tiver poucas notícias, complemente com desenvolvimentos relevantes que você conhece, indicando [análise própria]. Mínimo 3 notícias bem detalhadas, idealmente 4.)\n\n---\n\n## 🚀 PRODUTO & GROWTH\n\n(Se houver conteúdo do Lenny's Newsletter ou Dwarkesh: cite a fonte e resuma o insight principal em 3-4 linhas com o que é acionável para um empreendedor. Se não houver novo conteúdo: compartilhe 1-2 insights sobre estratégia de produto, growth ou negócios digitais baseado em seu conhecimento, indicando [curadoria].)\n\n---\n\n## 💊 PÍLULA DO CONHECIMENTO\n\n[Escolha UM insight do livro The Scaling Era: An Oral History of AI 2019-2025, dos ensaios de Dario Amodei em darioamodei.com, ou de episódios do Dwarkesh Podcast. Escreva 4-5 linhas com o insight, seu contexto histórico e por que é relevante hoje. Varie o tema diariamente — nunca repita o mesmo assunto em dias consecutivos.]\n\n---\n\n## ✝️ DEVOCIONAL DO DIA\n\n**[Livro Cap:Verso]** — \"[texto completo e fiel do versículo bíblico]\"\n\n[2-3 linhas de reflexão cristã prática, encorajadora e aplicável ao dia a dia de um empreendedor cristão.]\n\n---\n\n## 💬 FRASE DO DIA\n\n\"[frase inspiradora e memorável]\"\n— **[Nome completo do Autor]**\n\n---\n_Newsletter gerada às 7h por IA_ ✨`;\nreturn [{ json: { prompt } }];"
       }
     },
     {
@@ -51,22 +68,35 @@
       "name": "Claude Synthesis",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1280, 300],
+      "position": [
+        1280,
+        300
+      ],
       "parameters": {
         "method": "POST",
         "url": "https://api.anthropic.com/v1/messages",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "x-api-key", "value": "YOUR_ANTHROPIC_API_KEY" },
-            { "name": "anthropic-version", "value": "2023-06-01" }
+            {
+              "name": "x-api-key",
+              "value": "YOUR_ANTHROPIC_API_KEY"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            }
           ]
         },
         "sendBody": true,
         "contentType": "json",
+        "rawContentType": "",
+        "body": "",
+        "options": {
+          "timeout": 120000
+        },
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({model: 'claude-sonnet-4-6', max_tokens: 4000, messages: [{role: 'user', content: $json.prompt}]}) }}",
-        "options": { "timeout": 120000 }
+        "jsonBody": "={{ JSON.stringify({model: 'claude-sonnet-4-6', max_tokens: 6000, messages: [{role: 'user', content: $json.prompt}]}) }}"
       }
     },
     {
@@ -74,19 +104,72 @@
       "name": "Salvar no Notion",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1540, 300],
+      "position": [
+        1540,
+        300
+      ],
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const https = require('https');\n\nconst notionToken = 'YOUR_NOTION_TOKEN';\nconst parentPageId = 'YOUR_NOTION_PARENT_PAGE_ID';\n\nconst claudeText = $json.content[0].text;\nconst today = new Date();\nconst dd = String(today.getDate()).padStart(2, '0');\nconst mm = String(today.getMonth() + 1).padStart(2, '0');\nconst title = `Atualize Hoje - ${dd}/${mm}`;\n\nconst lines = claudeText.split('\\n');\nconst blocks = [];\nfor (const line of lines) {\n  const t = line.trim();\n  if (!t) continue;\n  if (t === '---') { blocks.push({ object: 'block', type: 'divider', divider: {} }); continue; }\n  if (/^\\*\\*[^*]+\\*\\*$/.test(t)) {\n    blocks.push({ object: 'block', type: 'heading_2', heading_2: { rich_text: [{ type: 'text', text: { content: t.replace(/\\*\\*/g, '') } }] } });\n    continue;\n  }\n  if (t.startsWith('- ')) {\n    blocks.push({ object: 'block', type: 'bulleted_list_item', bulleted_list_item: { rich_text: [{ type: 'text', text: { content: t.substring(2).substring(0, 2000) } }] } });\n    continue;\n  }\n  const isItalic = t.startsWith('_') && t.endsWith('_');\n  const cleanText = isItalic ? t.slice(1, -1) : t;\n  let remaining = cleanText;\n  while (remaining.length > 0) {\n    const chunk = remaining.substring(0, 2000);\n    remaining = remaining.substring(2000);\n    const richText = [{ type: 'text', text: { content: chunk } }];\n    if (isItalic) richText[0].annotations = { italic: true };\n    blocks.push({ object: 'block', type: 'paragraph', paragraph: { rich_text: richText } });\n  }\n}\n\nfunction notionReq(method, path, body) {\n  return new Promise((resolve, reject) => {\n    const bodyStr = JSON.stringify(body);\n    const opts = {\n      hostname: 'api.notion.com', port: 443, path, method,\n      headers: { 'Authorization': `Bearer ${notionToken}`, 'Content-Type': 'application/json', 'Notion-Version': '2022-06-28', 'Content-Length': Buffer.byteLength(bodyStr) }\n    };\n    const req = https.request(opts, (res) => {\n      let raw = '';\n      res.on('data', c => raw += c);\n      res.on('end', () => {\n        try {\n          const parsed = JSON.parse(raw);\n          if (res.statusCode < 200 || res.statusCode >= 300) reject(new Error(`Notion ${res.statusCode}: ${JSON.stringify(parsed)}`));\n          else resolve(parsed);\n        } catch(e) { reject(e); }\n      });\n    });\n    req.on('error', reject);\n    req.write(bodyStr);\n    req.end();\n  });\n}\n\nconst page = await notionReq('POST', '/v1/pages', {\n  parent: { page_id: parentPageId },\n  icon: { type: 'emoji', emoji: '📰' },\n  properties: { title: [{ text: { content: title } }] },\n  children: blocks.slice(0, 100)\n});\n\nfor (let i = 100; i < blocks.length; i += 100) {\n  await notionReq('PATCH', `/v1/blocks/${page.id}/children`, { children: blocks.slice(i, i + 100) });\n}\n\nreturn [{ json: { notion_url: page.url, notion_page_id: page.id, title, status: 'saved' } }];"
+        "jsCode": "const https = require('https');\n\nconst notionToken = 'YOUR_NOTION_TOKEN';\nconst parentPageId = 'YOUR_NOTION_PARENT_PAGE_ID';\n\nconst claudeText = $json.content[0].text;\nconst today = new Date();\nconst dd = String(today.getDate()).padStart(2, '0');\nconst mm = String(today.getMonth() + 1).padStart(2, '0');\nconst title = `Atualize Hoje - ${dd}/${mm}`;\n\nfunction makeBlock(type, content) {\n  return { object: 'block', type, [type]: content };\n}\n\nfunction rt(text, bold, italic) {\n  const obj = { type: 'text', text: { content: text.substring(0, 2000) } };\n  if (bold || italic) obj.annotations = { bold: !!bold, italic: !!italic };\n  return [obj];\n}\n\nfunction para(text, bold, italic) {\n  return makeBlock('paragraph', { rich_text: rt(text, bold, italic) });\n}\n\nfunction h2(text) { return makeBlock('heading_2', { rich_text: rt(text) }); }\nfunction h3(text) { return makeBlock('heading_3', { rich_text: rt(text) }); }\n\nfunction callout(text, emoji) {\n  return makeBlock('callout', { rich_text: rt(text), icon: { type: 'emoji', emoji } });\n}\n\nfunction qblock(text) { return makeBlock('quote', { rich_text: rt(text) }); }\nfunction divider() { return makeBlock('divider', {}); }\nfunction bullet(text) { return makeBlock('bulleted_list_item', { rich_text: rt(text) }); }\n\nconst lines = claudeText.split('\\n');\nconst blocks = [];\n\nfor (const line of lines) {\n  const t = line.trim();\n  if (!t) continue;\n\n  if (t === '---') { blocks.push(divider()); continue; }\n\n  if (t.startsWith('## ')) { blocks.push(h2(t.slice(3))); continue; }\n\n  if (/^\\*\\*[^*]+\\*\\*$/.test(t)) { blocks.push(h3(t.replace(/\\*\\*/g, ''))); continue; }\n\n  if (t.startsWith('💡')) { blocks.push(callout(t.replace(/^💡\\s*/, ''), '💡')); continue; }\n\n  if (t.startsWith('Bom dia')) { blocks.push(callout(t, '🌅')); continue; }\n\n  if (t.startsWith('_') && t.endsWith('_')) { blocks.push(para(t.slice(1, -1), false, true)); continue; }\n\n  if (t.startsWith('—') || t.startsWith('–') || t.startsWith('—')) {\n    blocks.push(para('— ' + t.replace(/^[—–]\\s*/, '').replace(/\\*\\*/g, ''), false, true));\n    continue;\n  }\n\n  if (t.startsWith('\"') || t.startsWith('“')) { blocks.push(qblock(t)); continue; }\n\n  if (t.startsWith('- ')) { blocks.push(bullet(t.slice(2))); continue; }\n\n  if (t.includes('**')) { blocks.push(para(t.replace(/\\*\\*/g, ''))); continue; }\n\n  let rem = t;\n  while (rem.length > 0) {\n    blocks.push(para(rem.substring(0, 2000)));\n    rem = rem.substring(2000);\n  }\n}\n\nfunction notionReq(method, path, body) {\n  return new Promise((resolve, reject) => {\n    const bodyStr = JSON.stringify(body);\n    const opts = {\n      hostname: 'api.notion.com', port: 443, path, method,\n      headers: {\n        'Authorization': `Bearer ${notionToken}`,\n        'Content-Type': 'application/json',\n        'Notion-Version': '2022-06-28',\n        'Content-Length': Buffer.byteLength(bodyStr)\n      }\n    };\n    const req = https.request(opts, (res) => {\n      let raw = '';\n      res.on('data', c => raw += c);\n      res.on('end', () => {\n        try {\n          const parsed = JSON.parse(raw);\n          if (res.statusCode < 200 || res.statusCode >= 300)\n            reject(new Error(`Notion ${res.statusCode}: ${JSON.stringify(parsed)}`));\n          else resolve(parsed);\n        } catch(e) { reject(e); }\n      });\n    });\n    req.on('error', reject);\n    req.write(bodyStr);\n    req.end();\n  });\n}\n\nconst page = await notionReq('POST', '/v1/pages', {\n  parent: { page_id: parentPageId },\n  icon: { type: 'emoji', emoji: '📰' },\n  properties: { title: [{ text: { content: title } }] },\n  children: blocks.slice(0, 100)\n});\n\nfor (let i = 100; i < blocks.length; i += 100) {\n  await notionReq('PATCH', `/v1/blocks/${page.id}/children`, { children: blocks.slice(i, i + 100) });\n}\n\nreturn [{ json: { notion_url: page.url, notion_page_id: page.id, title, status: 'saved' } }];"
       }
     }
   ],
   "connections": {
-    "Cron 7h": { "main": [[{ "node": "Fetch RSS", "type": "main", "index": 0 }]] },
-    "Fetch RSS": { "main": [[{ "node": "Filtro 24h", "type": "main", "index": 0 }]] },
-    "Filtro 24h": { "main": [[{ "node": "Preparar Prompt", "type": "main", "index": 0 }]] },
-    "Preparar Prompt": { "main": [[{ "node": "Claude Synthesis", "type": "main", "index": 0 }]] },
-    "Claude Synthesis": { "main": [[{ "node": "Salvar no Notion", "type": "main", "index": 0 }]] }
+    "Cron 7h": {
+      "main": [
+        [
+          {
+            "node": "Fetch RSS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch RSS": {
+      "main": [
+        [
+          {
+            "node": "Filtro 24h",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtro 24h": {
+      "main": [
+        [
+          {
+            "node": "Preparar Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Prompt": {
+      "main": [
+        [
+          {
+            "node": "Claude Synthesis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude Synthesis": {
+      "main": [
+        [
+          {
+            "node": "Salvar no Notion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
   },
   "settings": {
     "executionOrder": "v1",
@@ -94,5 +177,9 @@
     "saveDataErrorExecution": "all",
     "saveDataSuccessExecution": "all",
     "saveManualExecutions": true
+  },
+  "versionMetadata": {
+    "name": null,
+    "description": null
   }
 }
