@@ -1,0 +1,21 @@
+{
+  "politica_brasil": [
+    { "nome": "G1 - Politica", "url": "https://g1.globo.com/rss/g1/politica/feed.xml" },
+    { "nome": "UOL Noticias", "url": "https://rss.uol.com.br/feed/noticias.xml" },
+    { "nome": "Agencia Brasil", "url": "https://agenciabrasil.ebc.com.br/rss/ultimasnoticias/feed.xml" },
+    { "nome": "Folha de SP - Brasil", "url": "https://feeds.folha.uol.com.br/brasil/rss091.xml" }
+  ],
+  "economia_mercado": [
+    { "nome": "InfoMoney", "url": "https://www.infomoney.com.br/feed/" },
+    { "nome": "Valor Economico", "url": "https://valor.globo.com/rss/home.xml" },
+    { "nome": "CNN Brasil - Economia", "url": "https://www.cnnbrasil.com.br/economia/feed/" },
+    { "nome": "Folha de SP - Mercado", "url": "https://feeds.folha.uol.com.br/mercado/rss091.xml" }
+  ],
+  "ia_tecnologia": [
+    { "nome": "MIT Technology Review", "url": "https://www.technologyreview.com/feed/" },
+    { "nome": "TechCrunch", "url": "https://techcrunch.com/feed/" },
+    { "nome": "Olhar Digital", "url": "https://olhardigital.com.br/feed/" },
+    { "nome": "The Verge", "url": "https://www.theverge.com/rss/index.xml" },
+    { "nome": "Ars Technica", "url": "https://feeds.arstechnica.com/arstechnica/index" }
+  ]
+}
