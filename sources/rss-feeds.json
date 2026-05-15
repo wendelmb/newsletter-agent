@@ -1,21 +1,39 @@
 {
-  "politica_brasil": [
-    { "nome": "G1 - Politica", "url": "https://g1.globo.com/rss/g1/politica/feed.xml" },
-    { "nome": "UOL Noticias", "url": "https://rss.uol.com.br/feed/noticias.xml" },
-    { "nome": "Agencia Brasil", "url": "https://agenciabrasil.ebc.com.br/rss/ultimasnoticias/feed.xml" },
-    { "nome": "Folha de SP - Brasil", "url": "https://feeds.folha.uol.com.br/brasil/rss091.xml" }
-  ],
-  "economia_mercado": [
+  "mercado_economia": [
     { "nome": "InfoMoney", "url": "https://www.infomoney.com.br/feed/" },
     { "nome": "Valor Economico", "url": "https://valor.globo.com/rss/home.xml" },
     { "nome": "CNN Brasil - Economia", "url": "https://www.cnnbrasil.com.br/economia/feed/" },
     { "nome": "Folha de SP - Mercado", "url": "https://feeds.folha.uol.com.br/mercado/rss091.xml" }
   ],
+  "politica_brasil": [
+    { "nome": "G1 - Politica", "url": "https://g1.globo.com/rss/g1/politica/feed.xml" },
+    { "nome": "Agencia Brasil", "url": "https://agenciabrasil.ebc.com.br/rss/ultimasnoticias/feed.xml" },
+    { "nome": "Folha de SP - Brasil", "url": "https://feeds.folha.uol.com.br/brasil/rss091.xml" },
+    { "nome": "UOL Noticias", "url": "https://rss.uol.com.br/feed/noticias.xml" }
+  ],
   "ia_tecnologia": [
     { "nome": "MIT Technology Review", "url": "https://www.technologyreview.com/feed/" },
     { "nome": "TechCrunch", "url": "https://techcrunch.com/feed/" },
-    { "nome": "Olhar Digital", "url": "https://olhardigital.com.br/feed/" },
     { "nome": "The Verge", "url": "https://www.theverge.com/rss/index.xml" },
-    { "nome": "Ars Technica", "url": "https://feeds.arstechnica.com/arstechnica/index" }
-  ]
+    { "nome": "Ars Technica", "url": "https://feeds.arstechnica.com/arstechnica/index" },
+    { "nome": "Olhar Digital", "url": "https://olhardigital.com.br/feed/" }
+  ],
+  "produto_growth": [
+    { "nome": "Lenny's Newsletter", "url": "https://www.lennysnewsletter.com/feed" },
+    { "nome": "Dwarkesh Patel (Substack)", "url": "https://www.dwarkeshpatel.com/feed" }
+  ],
+  "_claude_generated": {
+    "pilula_conhecimento": {
+      "descricao": "Claude sintetiza a partir de: livro 'The Scaling Era: An Oral History of AI, 2019-2025', ensaios e blog de Dario Amodei (darioamodei.com), episodios do Dwarkesh Podcast",
+      "formato": "Um topico por dia, rotativo. Ex: corrida OpenAI vs Google 2023, o momento GPT-4, a fundacao da Anthropic, etc."
+    },
+    "devocional": {
+      "descricao": "Versiculo biblico + reflexao crista curta gerada pelo Claude",
+      "formato": "Versiculo (Livro Cap:Verso) seguido de 2-3 linhas de reflexao pratica"
+    },
+    "frase_do_dia": {
+      "descricao": "Frase inspiradora gerada pelo Claude, atribuida ao autor original",
+      "formato": "'Frase' — Autor"
+    }
+  }
 }
